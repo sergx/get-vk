@@ -15,4 +15,12 @@ class Task extends Model
     //     return $this->belongsToMany('Modules\Product\Entities\Product')->withPivot('price', 'quantity')->withTimestamps();
     //     return $this->belongsTo('App\User');
     // }
+
+    public function project(){
+        return $this->belongsTo('Modules\Project\Entities\Project');
+    }
+
+    public function task_data(){
+        return $this->hasMany('Modules\Project\Entities\TaskData');
+    }
 }

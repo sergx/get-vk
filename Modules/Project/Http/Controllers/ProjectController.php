@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 
 use Modules\Project\Entities\Project;
 
+use Modules\Project\Entities\Task;
+
 class ProjectController extends Controller
 {
 
@@ -70,7 +72,8 @@ class ProjectController extends Controller
         {
             return redirect()->route('project.index')->with('error', "<strong>Ой!</strong> Доступ ограничен");
         }
-        return view('project::show')->with('project', $project);
+        $tasks = Task::where('project_id', $id)->get();
+        return view('project::show', ['project' => $project, 'tasks' => $tasks]);
     }
 
     /**

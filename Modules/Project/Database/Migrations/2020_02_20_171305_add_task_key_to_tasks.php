@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateTasksTable extends Migration
+class AddTaskKeyToTasks extends Migration
 {
     /**
      * Run the migrations.
@@ -13,10 +13,8 @@ class CreateTasksTable extends Migration
      */
     public function up()
     {
-        Schema::create('tasks', function (Blueprint $table) {
-            $table->bigIncrements('id');
-
-            $table->timestamps();
+        Schema::table('tasks', function (Blueprint $table) {
+            $table->string("task_key", 128)->nullable();
         });
     }
 
@@ -27,6 +25,8 @@ class CreateTasksTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('tasks');
+        Schema::table('', function (Blueprint $table) {
+
+        });
     }
 }
