@@ -1,0 +1,13 @@
+{
+    "name": "VkGroup",
+    "alias": "vkgroup",
+    "description": "",
+    "keywords": [],
+    "order": 0,
+    "providers": [
+        "Modules\\VkGroup\\Providers\\VkGroupServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

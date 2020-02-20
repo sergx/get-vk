@@ -1,0 +1,25 @@
+{
+    "name": "nwidart/vkgroup",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\VkGroup\\Providers\\VkGroupServiceProvider"
+            ],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\VkGroup\\": ""
+        }
+    }
+}

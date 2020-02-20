@@ -1,0 +1,13 @@
+{
+    "name": "VkUser",
+    "alias": "vkuser",
+    "description": "",
+    "keywords": [],
+    "order": 0,
+    "providers": [
+        "Modules\\VkUser\\Providers\\VkUserServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

@@ -1,0 +1,13 @@
+{
+    "name": "VkApi",
+    "alias": "vkapi",
+    "description": "",
+    "keywords": [],
+    "order": 0,
+    "providers": [
+        "Modules\\VkApi\\Providers\\VkApiServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}
