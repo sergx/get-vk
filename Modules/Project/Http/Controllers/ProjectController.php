@@ -8,7 +8,7 @@ use App\Http\Controllers\Controller;
 
 use Modules\Project\Entities\Project;
 
-use Modules\Project\Entities\Task;
+use Modules\Task\Entities\Task;
 
 class ProjectController extends Controller
 {

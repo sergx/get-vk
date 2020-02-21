@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Project\Http\Controllers\Task;
+namespace Modules\Task\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -8,7 +8,7 @@ use App\Http\Controllers\Controller;
 
 use Modules\Project\Entities\Project;
 
-class TaskIndexController extends Controller
+class TaskController extends Controller
 {
 
     /**
@@ -26,8 +26,8 @@ class TaskIndexController extends Controller
      */
     public function index()
     {
-        $tasks = Task::all();
-        return view('project::task-index.index')->with('tasks', $tasks);
+        // $tasks = Task::all();
+        // return view('task::index')->with('tasks', $tasks);
     }
 
     /**
@@ -45,6 +45,6 @@ class TaskIndexController extends Controller
 
         $project = Project::find($request->project_id);
 
-        return view('project::task-index.create', ['task_routs' => $task_routs, 'project' => $project]);
+        return view('task::create', ['task_routs' => $task_routs, 'project' => $project]);
     }
 }

@@ -3,5 +3,6 @@
     "Project": true,
     "VkApi": true,
     "VkGroup": true,
-    "VkUser": true
+    "VkUser": true,
+    "Task": true
 }

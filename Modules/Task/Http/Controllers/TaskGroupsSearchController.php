@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Project\Http\Controllers\Task;
+namespace Modules\Task\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -8,8 +8,8 @@ use App\Http\Controllers\Controller;
 
 use Modules\Project\Entities\Project;
 
-use Modules\Project\Entities\Task;
-use Modules\Project\Entities\TaskData;
+use Modules\Task\Entities\Task;
+use Modules\Task\Entities\TaskData;
 
 class TaskGroupsSearchController extends Controller
 {
@@ -34,7 +34,7 @@ class TaskGroupsSearchController extends Controller
     public function index()
     {
         $tasks = Task::all();
-        return view('project::task-groups-search.index')->with('tasks', $tasks);
+        return view('task::groups-search.index')->with('tasks', $tasks);
     }
 
     /**
@@ -44,7 +44,7 @@ class TaskGroupsSearchController extends Controller
     public function create(Request $request)
     {
         $project = Project::find($request->project_id);
-        return view('project::task-groups-search.create')->with('project', $project);
+        return view('task::groups-search.create')->with('project', $project);
     }
 
     /**
@@ -98,7 +98,7 @@ class TaskGroupsSearchController extends Controller
             return redirect()->route('task.index')->with('error', "<strong>Ой!</strong> Доступ ограничен");
         }
 
-        return view('project::task-groups-search.show', ['task' => $task, 'task_data' => $task_data]);
+        return view('task::groups-search.show', ['task' => $task, 'task_data' => $task_data]);
     }
 
     /**
@@ -113,7 +113,7 @@ class TaskGroupsSearchController extends Controller
         // {
         //     return redirect()->route('task.index')->with('error', "<strong>Ой!</strong> Доступ ограничен");
         // }
-        // return view('project::task-groups-search.edit')->with('task', $task);
+        // return view('task::groups-search.edit')->with('task', $task);
     }
 
     /**

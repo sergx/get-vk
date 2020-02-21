@@ -1,14 +1,12 @@
 <?php
 
-namespace Modules\Project\Entities;
+namespace Modules\Task\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 
-class TaskData extends Model
+class Task extends Model
 {
     protected $fillable = [];
-
-    protected $table = "task_data";
 
     // public function PLACEHOLDER(){
     //     return $this->hasMany('Modules\PLACEHOLDER\Entities\PLACEHOLDER');
@@ -18,7 +16,11 @@ class TaskData extends Model
     //     return $this->belongsTo('App\User');
     // }
 
-    public function task(){
-        return $this->belongsTo('Modules\Project\Entities\Task');
+    public function project(){
+        return $this->belongsTo('Modules\Project\Entities\Project');
+    }
+
+    public function task_data(){
+        return $this->hasMany('Modules\Task\Entities\TaskData');
     }
 }
