@@ -4,7 +4,7 @@ namespace Modules\VkGroup\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Group extends Model
+class VkGroup extends Model
 {
     protected $fillable = [];
 

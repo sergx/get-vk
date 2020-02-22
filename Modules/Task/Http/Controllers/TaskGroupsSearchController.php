@@ -6,16 +6,25 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use App\Http\Controllers\Controller;
 
-use Modules\Project\Entities\Project;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
+use Modules\Project\Entities\Project;
+use Modules\VkGroup\Entities\VkGroup;
 use Modules\Task\Entities\Task;
 use Modules\Task\Entities\TaskData;
+
+use Modules\VkApi\Http\Controllers\VkApiController;
+
 
 class TaskGroupsSearchController extends Controller
 {
     public $controller_data = [
         ''
     ];
+
+    public $VkApiController;
 
     /**
      * Create a new controller instance.
@@ -25,6 +34,8 @@ class TaskGroupsSearchController extends Controller
     public function __construct()
     {
         $this->middleware('auth'/*, ['except' => ['index','show']] */);
+        
+        $this->VkApiController = new VkApiController;
     }
 
     /**
@@ -57,7 +68,7 @@ class TaskGroupsSearchController extends Controller
         $this->validate($request, [
             'search_query' => 'required',
         ]);
-        
+
         $search_types = [
             0 => 'По-умолчанию',
             1 => 'Макс.',
@@ -67,10 +78,12 @@ class TaskGroupsSearchController extends Controller
         $task->name = $request->name?: "Поиск по группам — «".$request->search_query."», ".$search_types[intval($request->group_search_type)].", ".( intval($request->limit) );
         $task->project_id = $request->project_id;
         $task->task_key = "groups-search";
+        $task->status = "CREATED";
         $task->save();
+
+        $this->task_id = $task->id;
         
-        foreach(['search_query','group_search_type','limit']
-            as $key){
+        foreach(['search_query','group_search_type','limit'] as $key){
             $td = new TaskData;
             $td->task_id = $task->id;
             $td->key = $key;
@@ -78,7 +91,27 @@ class TaskGroupsSearchController extends Controller
             $td->save();
         }
 
-        return redirect()->route('project.show', $request->project_id)->with('success', "Проект <strong>".$request->name."</strong> создан");
+        $api_result = $this->addGroupsToDB([
+            "q" => $request->search_query,
+            "count" => 1000,
+            "offset" => 0,
+          ]);
+        if($api_result !== true){
+            $td = new TaskData;
+            $td->task_id = $task->id;
+            $td->key = "api_result_error";
+            $td->value = $api_result;
+            $td->save();
+            $task->status = "HAS_ERROR";
+            $task->save();
+            return redirect()->route('project.show', $request->project_id)->with('error', "<strong>Ошибка</strong><pre>".$api_result."</pre>");
+        }else{
+            $task->status = "DONE_PARSED";
+            $task->save();
+            return redirect()->route('project.show', $request->project_id)->with('success', "Задача выполнена корректно");
+        }
+
+        
     }
 
     /**
@@ -87,8 +120,10 @@ class TaskGroupsSearchController extends Controller
      * @return Response
      */
     public function show(Request $request)
-    {
-        $task = Task::with(['project','task_data'])->where('id',$request->task_id)->first();
+    {    
+        $task = Task::with(['project','task_data','vk_groups'])->where('id',$request->task_id)->first();
+        $task->vk_groups = $task->vk_groups->sortBy('sort_order');
+
         $task_data = []; // search_query, group_search_type, limit
         foreach($task->task_data as $td){
             $task_data[$td->key] = $td->value;
@@ -101,62 +136,73 @@ class TaskGroupsSearchController extends Controller
         return view('task::groups-search.show', ['task' => $task, 'task_data' => $task_data]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     * @param int $id
-     * @return Response
-     */
-    public function edit($id)
-    {
-        // $task = Task::find($id);
-        // if($task->user_id != auth()->user()->id)
-        // {
-        //     return redirect()->route('task.index')->with('error', "<strong>Ой!</strong> Доступ ограничен");
-        // }
-        // return view('task::groups-search.edit')->with('task', $task);
-    }
+    // Отрефакторить нужно в соответствии с SDK
+    public function addGroupsToDB($params){
 
-    /**
-     * Update the specified resource in storage.
-     * @param Request $request
-     * @param int $id
-     * @return Response
-     */
-    public function update(Request $request, $id)
-    {
-        // $this->validate($request, [
-        //     'name' => 'required',
-        // ]);
+        // {"q":"Сварка","count":250,"offset":0}
+        $code = 'var result = [];'."\n";
+        
+        //$code .= 'result.push({"sort_type":'.$sort_order.', "res":API.groups.search({"q":"'.$params['q'].'","count":1000,"offset":0,"type":"'.$type.'","sort":'.$sort_order.'})});'."\n";
 
-        // $task = Task::find($id);
-
-        // if($task->user_id != auth()->user()->id)
-        // {
-        //     return redirect()->route('task.index')->with('error', "<strong>Ой!</strong> Доступ ограничен");
-        // }
-
-
-        // $task->name = $request->name;
-        // $task->save();
-
-        // return redirect()->route('task.index')->with('success', "Проект <strong>".$request->name."</strong> обновлен");
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     * @param int $id
-     * @return Response
-     */
-    public function destroy($id)
-    {
-        // $task = Task::find($id);
-
-        // if($task->user_id != auth()->user()->id)
-        // {
-        //     return redirect()->route('task.index')->with('error', "<strong>Ой!</strong> Доступ ограничен");
-        // }
-        // $task_name = $task->name;
-        // $task->delete();
-        // return redirect()->route('task.index')->with('success', "Проект <strong>".$task_name."</strong> удален");
-    }
+        // Чтобы получить максимум результатов
+        foreach(['group', 'page'] as $type)
+        {
+          foreach([0,1,2,3,4,5] as $sort_order)
+          {
+            $code .= 'result.push({"sort_type":'.$sort_order.', "res":API.groups.search({"q":"'.$params['q'].'","count":1000,"offset":0,"type":"'.$type.'","sort":'.$sort_order.'})});'."\n";
+          }
+        }
+        $code .= 'return result;';
+        //return "<pre>".$code."</pre>";
+        $result = json_decode($this->VkApiController->vkr('execute', [
+          "code" => sprintf($code, json_encode($params, 256))
+        ]), true);
+    
+        $need_more = false;
+        if(!empty($result['error'])){
+          return print_r($result['error'], true);
+        }
+        $sort_order = 1;
+        foreach($result['response'] as $chunk){
+          $sort_type = $chunk['sort_type'];
+          $groups_to_insert = [];
+          $task_vk_group_to_insert = [];
+          foreach($chunk['res']['items'] as $item){       
+            if($item['is_closed']){
+                continue;
+            }
+            
+            $validator = Validator::make(
+              [
+                'id' => $item['id']
+              ],
+              [
+                'id' => 'unique:vk_groups'
+              ]);
+            
+            if($validator->passes()){
+              $groups_to_insert[] = [
+                'id' => $item['id'],
+                'name' => $item['name'],
+                'screen_name' => $item['screen_name'],
+                'type' => $item['type'],
+                'sort_type' => $sort_type,
+                'sort_order' => $sort_order++,
+                'is_closed' => $item['is_closed'],
+                'created_at' => now(),
+                'updated_at' => now(),
+              ];
+            }
+            $task_vk_group_to_insert[] = ["vk_group_id" => $item['id'], "task_id" => $this->task_id];
+          }
+          VkGroup::insert($groups_to_insert);
+          DB::table('task_vk_group')->insertOrIgnore($task_vk_group_to_insert);
+        }
+        if($need_more){
+          usleep(350000);
+          return $this->addGroupsToDB(array_merge($params, ['offset' => $need_more]));
+        }else{
+          return true;
+        }
+      }
 }

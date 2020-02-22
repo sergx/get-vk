@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container">
-
+  @include('vkapi::inc.vk_token')
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="{{route('project.index')}}">Проекты</a></li>

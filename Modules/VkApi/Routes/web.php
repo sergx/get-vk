@@ -12,7 +12,8 @@
 */
 
 Route::prefix('vkapi')->group(function() {
+    Route::get('/oauth',                      'VkApiController@vkOauth')             ->name('vkapi.oauth');
     Route::get('/',                             'VkApiController@index')               ->name('vkapi.index');
-    Route::post('/token-retrieve',              'VkApiController@tokenSave')           ->name('vkapi.token-save');
+    Route::post('/token-save',                  'VkApiController@tokenSave')           ->name('vkapi.token-save');
     Route::post('/request-handler/{method}',    'VkApiController@vkRequestHandler')    ->name('vkapi.request-handler');
 });

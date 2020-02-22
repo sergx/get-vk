@@ -23,4 +23,9 @@ class Task extends Model
     public function task_data(){
         return $this->hasMany('Modules\Task\Entities\TaskData');
     }
+
+    public function vk_groups()
+    {
+        return $this->belongsToMany('Modules\VkGroup\Entities\VkGroup');
+    }
 }

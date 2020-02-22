@@ -18,10 +18,20 @@
     <li><strong>Тип поиска</strong> <span>{{ intval($task_data['group_search_type']) }}</span></li>
     <li><strong>Лимит</strong> <span>{{ intval($task_data['limit']) }}</span></li>
   </ul>
-
 <pre>
-Разные типы задания - разные контроллеры?
-Уж точно разные обработчики
+Хорошо бы еще получить информацию о том - сколько всего групп найдено
 </pre>
+  <table>
+    <tbody>
+      @foreach ($task->vk_groups as $item)
+        <tr>
+          <td>{{$item->id}}</td>
+          <td>{{$item->name}}</td>
+          <td><a href="https://vk.com/{{$item->screen_name}}" target="_blank">{{$item->screen_name}}</a></td>
+          <td>{{$item->is_closed}}</td>
+        </tr>
+      @endforeach
+    </tbody>
+  </table>
 </div>
 @endsection

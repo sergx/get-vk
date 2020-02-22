@@ -17,7 +17,8 @@ class CreateTasksTable extends Migration
             $table->bigIncrements('id');
             $table->integer("project_id")->nullable();
             $table->string("name", 256)->nullable();
-            $table->integer("status")->nullable();
+            $table->string("status", 128)->nullable();
+            $table->string("task_key", 128)->nullable();
             $table->timestamps();
         });
     }

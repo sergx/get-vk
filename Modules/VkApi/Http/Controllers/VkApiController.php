@@ -6,6 +6,11 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use App\Http\Controllers\Controller;
 
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Validator;
+
+use Modules\VkApi\Entities\RequestHistory;
+
 class VkApiController extends Controller
 {
 
@@ -26,6 +31,10 @@ class VkApiController extends Controller
     });
   }
 
+
+  public function vkrSdk($method, $params = null){
+
+  }
   /**
    * Делает запрос к API VK
    * @param $method
@@ -44,10 +53,10 @@ class VkApiController extends Controller
     }
 
     $curl_handle = curl_init();
-    $requrest_url = $this->url . $method . '?' . ($p ? $p . '&' : '') . 'access_token=' . $this->access_token . '&v=' . $this->api_version;
+    $requrest_url = $this->url . $method . '?' . ($p ? $p . '&' : '') . 'access_token=' . session('vk-token') . '&v=' . $this->api_version;
     
     // Попытка взять из кэша
-    $cache_key = 'vk_'.md5($requrest_url);
+    $cache_key = 'vk_'.md5($this->url . $method . '?' . ($p ? $p . '&' : '') . '&v=' . $this->api_version);
     if (Cache::has($cache_key)) {
       return Cache::get($cache_key);
     }
@@ -68,7 +77,7 @@ class VkApiController extends Controller
       Cache::forever($cache_key, $response);
 
       // Запись в "лог"
-      $VkRequestHistory = new VkRequestHistory;
+      $VkRequestHistory = new RequestHistory;
       $VkRequestHistory->url = $requrest_url;
       $VkRequestHistory->method = $method;
       $VkRequestHistory->cache_key = $cache_key;
@@ -83,86 +92,37 @@ class VkApiController extends Controller
     return false;
   }
 
-  public function vkRequestHandler(Request $request, $method)
+
+  public function vkOauth(Request $request)
   {
-    switch($method)
-    {
-      case "groups.search":
-        //
-        $params = [
-          "q" => $request->q,
-          "count" => 1000,
-          "offset" => 0,
-        ];
-        return $this->addGroupsToDB($params);
-      break;
-    }
-  }
+    $client_id = 7314679; // ID Приложения
+    $redirect_uri = "http://get-vk.test/vkapi/oauth"; // Должен быть один и тот же для обоих методов
 
-  public function addGroupsToDB($params){
-    // {"q":"Сварка","count":250,"offset":0}
-
-    $code = 'var result = [];'."\n";
-    foreach(['group', 'page'] as $type)
-    {
-      foreach([0,1,2,3,4,5] as $sort_order)
-      {
-        $code .= 'result.push({"sort_type":'.$sort_order.', "res":API.groups.search({"q":"'.$params['q'].'","count":1000,"offset":0,"type":"'.$type.'","sort":'.$sort_order.'})});'."\n";
-      }
-    }
-    $code .= 'return result;';
-    //return "<pre>".$code."</pre>";
-    $result = json_decode($this->vkr('execute', [
-      "code" => sprintf($code, json_encode($params, 256))
-    ]), true);
-
-    $need_more = false;
-    //print_r($result['error']);
-    //return;
-    if(!empty($result['error'])){
-      return redirect()->route('vk-index')->with("error", '<strong>Ошибка</strong><pre>'.print_r($result['error'], true).'</pre>');
-    }
-    foreach($result['response'] as $chunk){
-      $sort_type = $chunk['sort_type'];
-      $data_to_insert = [];
-      foreach($chunk['res']['items'] as $item){             
-        $validator = Validator::make(
-          [
-            'id' => $item['id']
-          ],
-          [
-            'id' => 'unique:vk_groups'
-          ]);
-        
-        if($validator->passes()){
-          $data_to_insert[] = [
-            'id' => $item['id'],
-            'name' => $item['name'],
-            'screen_name' => $item['screen_name'],
-            'type' => $item['type'],
-            'sort_type' => $sort_type,
-            'is_closed' => $item['is_closed'],
-            'is_closed' => $item['is_closed'],
-          ];
-          $this->groups_added++;
-        }
-      }
-      VkGroup::insert($data_to_insert);
-    }
-    if($need_more){
-      usleep(350000);
-      return $this->addGroupsToDB(array_merge($params, ['offset' => $need_more]));
+    if(!empty($request->code)){
+      $oauth = new \VK\OAuth\VKOAuth();
+      $client_secret = "5soN20VECEskedHcHAgI"; // В настройках приложения на сайте VK
+      $code = $request->code;
+      
+      $response = $oauth->getAccessToken($client_id, $client_secret, $redirect_uri, $code);
+      session(['vk-token' => $response['access_token']]);
+      session(['vk-token-expires_in' => time() + $response['expires_in']]);
+      return redirect()->route("project.index");
     }else{
-      return redirect()->route('vk-index')->with("success", "Все ок! Добавлено групп ".$this->groups_added);
+      $oauth = new \VK\OAuth\VKOAuth();
+      $display = \VK\OAuth\VKOAuthDisplay::PAGE;
+      $scope = array(
+        \VK\OAuth\Scopes\VKOAuthUserScope::WALL,
+        \VK\OAuth\Scopes\VKOAuthUserScope::GROUPS,
+        \VK\OAuth\Scopes\VKOAuthUserScope::FRIENDS,
+  
+      );
+      $state = 'secret_state_code';
+  
+      $browser_url = $oauth->getAuthorizeUrl(\VK\OAuth\VKOAuthResponseType::CODE, $client_id, $redirect_uri, $display, $scope, $state);
+      return redirect($browser_url);
     }
   }
 
-
-  public function index()
-  {
-    //session()->forget('vk-token', 'vk-token-expires_in');
-    return view("parse.vk.index");
-  }
 
   // отсылается POST запрос с полученым кокеном
   public function tokenSave(Request $request){
@@ -175,7 +135,7 @@ class VkApiController extends Controller
     }
     session(['vk-token' => $params['access_token']]);
     session(['vk-token-expires_in' => time() + $params['expires_in']]);
-    return redirect()->route('vk-index');
+    return redirect()->route('project.index');
   }
 }
 

@@ -24,7 +24,7 @@
       <div class="col">
         {{Form::label('group_search_type','Тип поиска')}}
         <select class="form-control" id="group_search_type">
-          <option value="0">По умолчанию (как в результатах поиска на сайте)</option>
+          {{--<option value="0">По умолчанию (как в результатах поиска на сайте)</option>--}}
           <option value="1">Максимум</option>
         </select>
       </div>

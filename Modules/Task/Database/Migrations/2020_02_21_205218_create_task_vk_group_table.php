@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class AddTaskKeyToTasks extends Migration
+class CreateTaskVkGroupTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,8 +13,10 @@ class AddTaskKeyToTasks extends Migration
      */
     public function up()
     {
-        Schema::table('tasks', function (Blueprint $table) {
-            $table->string("task_key", 128)->nullable();
+        Schema::create('task_vk_group', function (Blueprint $table) {
+            $table->bigInteger('vk_group_id');
+            $table->bigInteger('task_id');
+            $table->unique(['vk_group_id', 'task_id']);
         });
     }
 
@@ -25,8 +27,6 @@ class AddTaskKeyToTasks extends Migration
      */
     public function down()
     {
-        Schema::table('', function (Blueprint $table) {
-
-        });
+        Schema::dropIfExists('task_vk_group');
     }
 }
