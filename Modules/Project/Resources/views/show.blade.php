@@ -16,7 +16,16 @@
   <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h5 class="mb-0">Задания</h5>
-      <a class="btn btn-primary btn-sm" href="{{route('task.create', $project->id)}}" role="button">Добавить</a>
+      <div class="btn-group">
+        <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Добавить
+        </button>
+        <div class="dropdown-menu">
+            @foreach ($task_routs as $item)
+            <a class="dropdown-item" href="{{$item->route}}">{{$item->name}}</a>
+            @endforeach
+        </div>
+      </div>
     </div>
     <div class="card-body">
       @if(count($tasks) > 0)
@@ -25,13 +34,10 @@
         <li class="list-group-item d-flex justify-content-between align-items-center">
           <a href="{{route('task.'.$item->task_key.'.show', ['project_id' => $project->id, 'task_id' => $item->id])}}">{{$item->name}}</a>
           
-          
-          {{--
-          {!! Form::open(['route' => ['task.destroy', $item->id], 'method' => 'POST', 'enctype' => 'multipart/form-data']) !!}
+          {!! Form::open(['route' => ['task.destroy', $project->id, $item->id], 'method' => 'POST', 'enctype' => 'multipart/form-data']) !!}
             {{Form::hidden('_method', 'DELETE')}}
-            {{Form::submit('Удалить', ['class' => 'btn btn-warning btn-sm'])}}
+            {{Form::submit('Удалить', ['class' => 'btn btn-danger btn-sm'])}}
           {!! Form::close() !!}
-          --}}
         </li>
         @endforeach
       </ul>

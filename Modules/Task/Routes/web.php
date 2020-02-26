@@ -16,7 +16,8 @@ Route::prefix('project/{project_id}/task')->group(function() {
     $prefix = 'task';
     $controllerName = 'TaskController';
 
-    Route::get(     '/create',              $controllerName.'@create')     ->name($prefix.'.create');
+    //Route::get(     '/create',              $controllerName.'@create')     ->name($prefix.'.create');
+    Route::delete(  '/{task_id}',           $controllerName.'@destroy')    ->name($prefix.'.destroy');
 
     Route::prefix('groups-search')->group(function() {
         $prefix = 'task.groups-search';
@@ -26,8 +27,16 @@ Route::prefix('project/{project_id}/task')->group(function() {
         Route::get(     '/create',                   $controllerName.'@create')     ->name($prefix.'.create');
         Route::post(    '/',                         $controllerName.'@store')      ->name($prefix.'.store');
         Route::get(     '/{task_id}',                $controllerName.'@show')       ->name($prefix.'.show');
-        Route::get(     '/{task_id}/edit',           $controllerName.'@edit')       ->name($prefix.'.edit');
-        Route::put(     '/{task_id}',                $controllerName.'@update')     ->name($prefix.'.update');
-        Route::delete(  '/{task_id}',                $controllerName.'@destroy')    ->name($prefix.'.destroy');
+    });
+
+    Route::prefix('users-from-group')->group(function() {
+        $prefix = 'task.users-from-group';
+        $controllerName = 'TaskUsersFromGroupController';
+
+        Route::get(     '/',                         $controllerName.'@index')          ->name($prefix.'.index');
+        Route::get(     '/create',                   $controllerName.'@create')         ->name($prefix.'.create');
+        Route::post(    '/',                         $controllerName.'@store')          ->name($prefix.'.store');
+        Route::get(     '/{task_id}',                $controllerName.'@show')           ->name($prefix.'.show');
+        Route::get(     '/{parse_users_task_id}/prossess',       $controllerName.'@taskProssess')   ->name($prefix.'.prossess');
     });
 });

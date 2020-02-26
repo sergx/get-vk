@@ -18,18 +18,9 @@
     <li><strong>Тип поиска</strong> <span>{{ intval($task_data['group_search_type']) }}</span></li>
     <li><strong>Лимит</strong> <span>{{ intval($task_data['limit']) }}</span></li>
   </ul>
-
-  <p><strong>Результат:</strong></p>
-  <ul>
-    <li><strong>Получено групп</strong> <span>{{count($task->vk_groups)}}</span></li>
-  </ul>
-  
-  {!! Form::open(['route' => ['task.users-from-group.store', $task->project->id], 'method' => 'POST', 'enctype' => 'multipart/form-data']) !!}
-  {{Form::hidden('project_id', $task->project->id)}}
-  {{Form::hidden('group_search_task_id', $task->id)}}
-  {{Form::submit('Собрать', ['class' => 'btn btn-primary'])}}
-  {!! Form::close() !!}
-
+<pre>
+Хорошо бы еще получить информацию о том - сколько всего групп найдено
+</pre>
   <table>
     <tbody>
       @foreach ($task->vk_groups as $item)
@@ -37,7 +28,7 @@
           <td>{{$item->id}}</td>
           <td>{{$item->name}}</td>
           <td><a href="https://vk.com/{{$item->screen_name}}" target="_blank">{{$item->screen_name}}</a></td>
-          <td>{{$item->users_count}} / {{$item->users_parsed}}</td>
+          <td>{{$item->is_closed}}</td>
         </tr>
       @endforeach
     </tbody>

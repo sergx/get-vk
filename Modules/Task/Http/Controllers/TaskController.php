@@ -7,6 +7,8 @@ use Illuminate\Http\Response;
 use App\Http\Controllers\Controller;
 
 use Modules\Project\Entities\Project;
+use Modules\Task\Entities\Task;
+use Modules\Task\Entities\TaskData;
 
 class TaskController extends Controller
 {
@@ -36,15 +38,35 @@ class TaskController extends Controller
      */
     public function create(Request $request)
     {
-        $task_routs = [
-            (object)[
-                'name' => 'GroupsSearch (Поиск групп)',
-                'route' => route('task.groups-search.create', $request->project_id),
-            ],
-        ];
+        // $task_routs = [
+        //     (object)[
+        //         'name' => 'GroupsSearch (Поиск групп)',
+        //         'route' => route('task.groups-search.create', $request->project_id),
+        //     ],
+        //     (object)[
+        //         'name' => 'UsersFromGroup (Парсинг пользователей из групп)',
+        //         'route' => route('task.users-from-group.create', $request->project_id),
+        //     ],
+        // ];
 
+        // $project = Project::find($request->project_id);
+
+        // return view('task::create', ['task_routs' => $task_routs, 'project' => $project]);
+    }
+
+    public function destroy(Request $request)
+    {
         $project = Project::find($request->project_id);
-
-        return view('task::create', ['task_routs' => $task_routs, 'project' => $project]);
+  
+        if($project->user_id != auth()->user()->id)
+        {
+            return redirect()->route('project.index')->with('error', "<strong>Ой!</strong> Доступ ограничен");
+        }
+  
+        $task = Task::find($request->task_id);
+        $task_name = $task->name;
+        $task->delete();
+        
+        return redirect()->route('project.index')->with('success', "Задача <strong>".$task_name."</strong> удалена");
     }
 }

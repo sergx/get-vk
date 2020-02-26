@@ -44,6 +44,9 @@ class VkApiController extends Controller
   {
     $p = '';
 
+    $params['access_token'] = session('vk-token');
+    $params['v'] = $this->api_version;
+    //dd($params);
     if ($params && is_array($params))
     {
       foreach ($params as $key => $param)
@@ -53,17 +56,21 @@ class VkApiController extends Controller
     }
 
     $curl_handle = curl_init();
-    $requrest_url = $this->url . $method . '?' . ($p ? $p . '&' : '') . 'access_token=' . session('vk-token') . '&v=' . $this->api_version;
+    $requrest_url = $this->url . $method /* . '?' . 'access_token=' . session('vk-token') . '&v=' . $this->api_version*/;
+    //$requrest_url = $this->url . $method . '?' . ($p ? $p . '&' : '') . 'access_token=' . session('vk-token') . '&v=' . $this->api_version;
     
     // Попытка взять из кэша
-    $cache_key = 'vk_'.md5($this->url . $method . '?' . ($p ? $p . '&' : '') . '&v=' . $this->api_version);
-    if (Cache::has($cache_key)) {
-      return Cache::get($cache_key);
-    }
+    //$cache_key = 'vk_'.md5($this->url . $method . '?' . ($p ? $p . '&' : '') . '&v=' . $this->api_version);
+    // if (Cache::has($cache_key)) {
+    //   return Cache::get($cache_key);
+    // }
 
     curl_setopt($curl_handle, CURLOPT_URL, $requrest_url);
+    curl_setopt($curl_handle, CURLOPT_POSTFIELDS, $p);
+    curl_setopt($curl_handle, CURLOPT_POST, 1);
     curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 2);
     curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, 1);
+
     $response = curl_exec($curl_handle);
 
     $result_code = curl_getinfo($curl_handle, CURLINFO_RESPONSE_CODE);
@@ -73,18 +80,36 @@ class VkApiController extends Controller
 
     if ($response)
     {
+      //dd($response);
       // запись в кэш
-      Cache::forever($cache_key, $response);
+      //Cache::forever($cache_key, $response);
 
       // Запись в "лог"
       $VkRequestHistory = new RequestHistory;
       $VkRequestHistory->url = $requrest_url;
       $VkRequestHistory->method = $method;
-      $VkRequestHistory->cache_key = $cache_key;
+      //$VkRequestHistory->cache_key = $cache_key;
       $VkRequestHistory->params = json_encode($params, 256);
       $VkRequestHistory->result_code = $result_code;
       $VkRequestHistory->result_length = $result_length;
+      if($result_length < 2500)
+      {
+        $VkRequestHistory->result = $response;
+      }
       $VkRequestHistory->save();
+
+      if($response == "ERROR")
+      {
+        if(session("reduce_limit")){
+          session(["reduce_limit" => session("reduce_limit") -1 ]);
+        }else{
+          session(["reduce_limit" => 20]);
+        }
+        //throw new \Illuminate\Http\Exceptions\HttpResponseException(redirect('http://get-vk.test/project/2/task/users-from-group/37/prossess?groups_from_task_id=29'));
+        throw new \Illuminate\Http\Exceptions\HttpResponseException(redirect(request()->getRequestUri()));
+        //return redirect(request()->getRequestUri());
+      }
+      session()->forget('reduce_limit');
 
       return $response;
     }
@@ -106,6 +131,14 @@ class VkApiController extends Controller
       $response = $oauth->getAccessToken($client_id, $client_secret, $redirect_uri, $code);
       session(['vk-token' => $response['access_token']]);
       session(['vk-token-expires_in' => time() + $response['expires_in']]);
+
+      // Для автоматического продления сессии
+      if(session('vk-token-expires_requestUri')){
+        $requestUri = session('vk-token-expires_requestUri');
+        session()->forget('vk-token-expires_requestUri');
+        return redirect(session('vk-token-expires_requestUri'));
+      }
+
       return redirect()->route("project.index");
     }else{
       $oauth = new \VK\OAuth\VKOAuth();

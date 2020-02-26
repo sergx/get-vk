@@ -16,33 +16,38 @@ class CreateVkUsersTable extends Migration
     public function up()
     {
         Schema::create('vk_users', function (Blueprint $table) {
-            $table->bigInteger('id')->unique();
-            $table->boolean('is_closed')->nullable();
-            $table->boolean('can_access_closed')->nullable();
-            $table->boolean('has_photo')->nullable();
+            $table->integer('id')->unique();
+            //$table->boolean('is_closed')->nullable();
+            //$table->boolean('has_photo')->nullable();
+            //$table->boolean('can_see_all_posts')->nullable();
             
-            $table->timestamp('last_seen')->nullable();
+            $table->integer('last_seen_days')->nullable();
 
-            $table->string('first_name', 140)->nullable();
-            $table->string('last_name', 140)->nullable();
-            $table->string('domain', 140)->nullable();
-            $table->timestamp('bdate')->nullable();
-            $table->boolean('sex')->nullable();
+            $table->integer('first_name_id')->nullable();
+            $table->integer('last_name_id')->nullable();
+            $table->tinyInteger('sex')->nullable();
+            $table->integer('bdate_id')->nullable();
             $table->integer('city_id')->nullable();
             $table->integer('country_id')->nullable();
+            $table->string('domain', 140)->nullable();
 
             
-            $table->string('mobile_phone', 32)->nullable();
-            $table->string('site', 140)->nullable();
-            $table->string('university_name', 140)->nullable();
-            $table->string('faculty_name', 140)->nullable();
+            $table->text('site')->nullable();
+            //$table->string('university_name', 140)->nullable();
+            //$table->string('faculty_name', 140)->nullable();
             
             $table->string('status', 140)->nullable();
 
-            $table->integer('followers_count')->unsigned()->nullable();
+            $table->integer('followers_count')->nullable();
             
-            $table->boolean('verified');
-            $table->timestamps();
+            $table->string('mobile_phone', 32)->nullable();
+
+            $table->boolean('verified')->nullable();
+            $table->tinyInteger('deactivated')->nullable();
+            $table->boolean('can_access_closed')->nullable();
+            $table->boolean('can_write_private_message')->nullable();
+            $table->integer('univ_fast_string_id')->nullable();
+            $table->integer('parsed_date_id')->nullable();
         });
     }
 

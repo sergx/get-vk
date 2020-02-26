@@ -21,6 +21,7 @@ class CreateRequestHistoriesTable extends Migration
             $table->integer('result_code')->unsigned()->nullable();
             $table->integer('result_length')->unsigned()->nullable();
             $table->string('cache_key', 128)->nullable();
+            $table->text('result')->nullable();
             $table->timestamps();
         });
     }

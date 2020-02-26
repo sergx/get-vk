@@ -1,13 +1,13 @@
 <?php
 
-namespace Modules\Task\Entities;
+namespace Modules\VkUser\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Task extends Model
+class VkUserBdate extends Model
 {
     protected $fillable = [];
-
+    public $timestamps = false;
     // public function PLACEHOLDER(){
     //     return $this->hasMany('Modules\PLACEHOLDER\Entities\PLACEHOLDER');
     //     return $this->hasOne('Modules\PLACEHOLDER\Entities\PLACEHOLDER');
@@ -15,17 +15,4 @@ class Task extends Model
     //     return $this->belongsToMany('Modules\Product\Entities\Product')->withPivot('price', 'quantity')->withTimestamps();
     //     return $this->belongsTo('App\User');
     // }
-
-    public function project(){
-        return $this->belongsTo('Modules\Project\Entities\Project');
-    }
-
-    public function task_data(){
-        return $this->hasMany('Modules\Task\Entities\TaskData');
-    }
-
-    public function vk_groups()
-    {
-        return $this->belongsToMany('Modules\VkGroup\Entities\VkGroup')->withPivot('sort_order')->orderBy('sort_order');
-    }
 }

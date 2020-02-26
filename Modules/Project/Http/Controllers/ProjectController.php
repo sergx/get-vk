@@ -72,8 +72,18 @@ class ProjectController extends Controller
         {
             return redirect()->route('project.index')->with('error', "<strong>Ой!</strong> Доступ ограничен");
         }
+        $task_routs = [
+            (object)[
+                'name' => 'GroupsSearch (Поиск групп)',
+                'route' => route('task.groups-search.create', $id),
+            ],
+            (object)[
+                'name' => 'UsersFromGroup (Парсинг пользователей из групп)',
+                'route' => route('task.users-from-group.create', $id),
+            ],
+        ];
         $tasks = Task::where('project_id', $id)->get();
-        return view('project::show', ['project' => $project, 'tasks' => $tasks]);
+        return view('project::show', ['project' => $project, 'task_routs' => $task_routs, 'tasks' => $tasks]);
     }
 
     /**

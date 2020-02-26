@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class AddSortOrderToVkGroupsTable extends Migration
+class CreateVkUserLastNamesTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,8 +13,10 @@ class AddSortOrderToVkGroupsTable extends Migration
      */
     public function up()
     {
-        Schema::table('vk_groups', function (Blueprint $table) {
-            $table->integer('sort_order')->nullable();
+        Schema::create('vk_user_last_names', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('last_name', 255)->nullable();
+            $table->unique(['last_name']);
         });
     }
 
@@ -25,8 +27,6 @@ class AddSortOrderToVkGroupsTable extends Migration
      */
     public function down()
     {
-        Schema::table('vk_groups', function (Blueprint $table) {
-
-        });
+        Schema::dropIfExists('vk_user_last_names');
     }
 }
