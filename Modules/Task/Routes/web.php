@@ -37,6 +37,7 @@ Route::prefix('project/{project_id}/task')->group(function() {
         Route::get(     '/create',                   $controllerName.'@create')         ->name($prefix.'.create');
         Route::post(    '/',                         $controllerName.'@store')          ->name($prefix.'.store');
         Route::get(     '/{task_id}',                $controllerName.'@show')           ->name($prefix.'.show');
-        Route::get(     '/{parse_users_task_id}/prossess',       $controllerName.'@taskProssess')   ->name($prefix.'.prossess');
+        Route::get('/{parse_users_task_id}/prossess',$controllerName.'@taskProssess')   ->name($prefix.'.prossess');
+        Route::get(     '/global_prossess',          $controllerName.'@globalProssess') ->name($prefix.'.global_prossess');
     });
 });

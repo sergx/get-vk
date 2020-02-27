@@ -51,40 +51,27 @@ class TaskUsersFromGroupController extends Controller
     return view('task::users-from-group.create', ['project' => $project, 'group_search_tasks' => $group_search_tasks, 'task_data' => $task_data]);
   }
 
-  public function taskProssess(Request $request)
-  {
-    // Для автоматического продления сессии
-    if(!empty(session('vk-token-expires_in')) && session('vk-token-expires_in') < strtotime('-2 hour') || empty(session('vk-token')))
-    {
-      session(['vk-token-expires_requestUri' => $request->requestUri]);
-      return redirect()->route('vkapi.oauth');
-    }
-
-    $groups_from_task = Task::with(['vk_groups'])->where('id', $request->groups_from_task_id)->first();
-    $parse_users_task = Task::find($request->parse_users_task_id);
-
-    if(in_array($parse_users_task->status, ["CREATED", "IN_PROGRESS"])){
-      return $this->addUsersToDB($groups_from_task, $parse_users_task);
-    }else{
-      return "Вроде все ок...";
-    }
-  }
-
   public function store(Request $request)
   {
     $groups_from_task = Task::find($request->group_search_task_id);
 
     $parse_users_task = new Task;
-    $parse_users_task->name = "Парсинг пользователей для «". $groups_from_task->name."»";
+    $parse_users_task->name = "Парсинг UserIds для «". $groups_from_task->name."»";
     $parse_users_task->project_id = $request->project_id;
     $parse_users_task->task_key = "users-from-group";
     $parse_users_task->status = "CREATED";
     $parse_users_task->save();
 
+    $td = new TaskData;
+    $td->task_id = $parse_users_task->id;
+    $td->key = "groups_search_task_id";
+    $td->value = $request->group_search_task_id;
+    $td->save();
+
     return redirect()->route('task.users-from-group.prossess', [
       'project_id' => $request->project_id,
       'parse_users_task_id' => $parse_users_task->id,
-      'groups_from_task_id' => $request->group_search_task_id,
+      //'group_search_task_id' => $request->group_search_task_id,
     ])->with('success', "Приступаем к задаче <strong>".$parse_users_task->name."</strong>");
 
     // В execute методе может быть не больше 25 запросов к API
@@ -97,13 +84,14 @@ class TaskUsersFromGroupController extends Controller
 
     // Можно собирать первой итерацией кол-во участников и первыую тысячу, а второй итерацией - уже всех остальных участников. Так по меньшей мере будет выборка последней тысячи вступивших, и не нужно городить жесть в js execute API.
   }
-  public function getFormApi($groups){
+  public function API_groups_getMembers($settings){
 
-    $count = 600;
-    $offset = 0;
-    $fields = 'sex,bdate,city,country,site,universities,can_see_all_posts,can_write_private_message,last_seen,status';
+    $groups = $settings['groups'];
+    $count = $settings['count'] ?: 600;
+    $limit = $settings['limit'] ?: 22;
+    $fields = $settings['fields'] ?: '';
+
     $groups_in_cache = [];
-    $limit = 22;
     if(session("reduce_limit"))
     {
       $limit = session("reduce_limit");
@@ -162,6 +150,98 @@ class TaskUsersFromGroupController extends Controller
 
     return $result['response'];
   }
+  
+  public function taskProssess(Request $request)
+  {
+    // Для автоматического продления сессии
+    if(!empty(session('vk-token-expires_in')) && session('vk-token-expires_in') < strtotime('-2 hour') || empty(session('vk-token')))
+    {
+      session(['vk-token-expires_requestUri' => $request->requestUri]);
+      return redirect()->route('vkapi.oauth');
+    }
+
+    //$groups_from_task = Modules\Task\Entities\Task::with(['vk_groups'])->where('id', $request->group_search_task_id)->first();
+    $parse_users_task = Task::with(['task_data'])->where('id', $request->parse_users_task_id)->first(); //group_search_task_id
+    //$parse_users_task->task_data->where('key', 'groups_search_task_id')->pluck('value')->first();
+
+    if(in_array($parse_users_task->status, ["CREATED", "IN_PROGRESS"])){
+      return $this->collectUserIdsOfGroup($parse_users_task);
+    }else{
+      return "Вроде все ок...";
+    }
+  }
+
+  public function collectUserIdsOfGroup(Task $parse_users_task){
+    $this->monitor = [];
+    $this->monitor['time_start'] = time(true);
+
+    $groups_search_task_id = $parse_users_task->task_data->where('key', 'groups_search_task_id')->pluck('value')->first();
+    $groups_from_task = Task::find($groups_search_task_id);
+    $groups = $groups_from_task->vk_groups()->where('is_closed',"!=", 1)->where('users_collected', NULL)->take(50)->get();
+    if(!count($groups))
+    {
+      $groups = $groups_from_task->vk_groups()->whereColumn('users_collected',"!=", "users_parsed")->where("users_collected", "<", "20000")->where('is_closed',"!=", 1)->take(50)->get();
+    }
+    //users_count users_parsed
+
+    $result = $this->API_groups_getMembers([
+      'groups' => $groups,
+      'count' => 1000,
+      'limit' => 25,
+      'fields' => '',
+    ]);
+    $user_linked = 0;
+    foreach($result as $group){
+      $vkGroup = VkGroup::find($group['id']);
+      
+      if(empty($group['res']['items'])){
+        $vkGroup->is_closed = 1;
+        $vkGroup->users_count = 99999999;
+        $vkGroup->users_parsed = 99999999;
+      }else{
+        $count_items = count($group['res']['items']);
+        $user_ids_to_group = [['vk_group_id' => $group['id'], 'vk_user_id' => $group['res']['items'][0]]];
+        foreach($group['res']['items'] as $user){
+          $user_ids_to_group[] = [$group['id'], $user];
+        }
+
+        DB::table('vk_group_vk_user')->insertOrIgnore($user_ids_to_group);
+
+        if(!$vkGroup->users_count){
+          $vkGroup->users_count = $group['res']['count'];
+        }
+        if(!$vkGroup->users_collected){
+          $vkGroup->users_collected = $count_items;
+        }else{
+          $vkGroup->users_collected += $count_items;
+        }
+        $user_linked += $count_items;
+      }
+      $vkGroup->updated_at = now();
+      $vkGroup->save();
+    }
+
+    if($parse_users_task->status == "CREATED")
+    {
+      $parse_users_task->status = "IN_PROGRESS";
+    }
+    $parse_users_task->time += time(true) - $this->monitor['time_start'];
+    $parse_users_task->save();
+
+    echo "<pre>";
+    echo date("Y-m-d H:i:s")."\r\n";
+    echo "Кол-во групп: ".count($result)."\r\n";
+    echo "Соединено пользователей с группами: ". $user_linked."\r\n";
+    echo "Секунд прошло: ". (time(true) - $this->monitor['time_start'])."\r\n";
+    echo "</pre>";
+
+    // Продолжить выполнение задания
+    return redirect()->route('task.users-from-group.prossess', [
+      'project_id' => request()->project_id,
+      'parse_users_task_id' => $parse_users_task->id,
+    ])->with('success', "Продолжаем выполнять задачу <strong>".$parse_users_task->name."</strong>");
+
+  }
 
   public function addUsersToDB(Task $groups_from_task, Task $parse_users_task){
     $this->monitor = [];
@@ -190,106 +270,14 @@ class TaskUsersFromGroupController extends Controller
       $parse_users_task->save();
       return redirect()->route('project.index')->with('success', "Задание <strong>".$parse_users_task->name."</strong> выполнено");
     }
-    
 
-    $result = $this->getFormApi($groups);
+    $result = $this->API_groups_getMembers([
+      'groups' => $groups,
+      'count' => 600,
+      'limit' => 22,
+      'fields' => 'sex,bdate,city,country,site,universities,can_see_all_posts,can_write_private_message,last_seen,status',
+    ]);
     //dd($result);
-/*
-    $vkUserFirstNames = [];
-    $vkUserLastNames = [];
-    $vkUserBdates = [];
-    $vkUserUnivFasts = [];
-
-
-
-
-    // Сперва загрузить имена и пр-пр
-    $vkUserFirstNames_to_insert = [];
-    $vkUserLastNames_to_insert = [];
-    $vkUserBdates_to_insert = [];
-    $vkUserUnivFasts_to_insert = [];
-
-    if(array_search($today, $vkUserBdates) === false)
-    {
-      $vkUserBdates_to_insert[] = ['bdate' => $today];
-    }
-    foreach($result as $group){
-      if(!empty($group['res']['items'])){
-        foreach($group['res']['items'] as $user)
-        {
-
-          if(isset($user['bdate']))
-          {
-            if(array_search($user['bdate'], $vkUserBdates) === false)
-            {
-              $vkUserBdates_to_insert[] = ['bdate' => $user['bdate']];
-              $vkUserBdates[] = $user['bdate'];
-            }
-          }
-
-          // if(isset($user['first_name']))
-          // {
-          //   if(array_search($user['first_name'], $vkUserFirstNames) === false)
-          //   {
-          //     $vkUserFirstNames_to_insert[] = ['first_name' => $user['first_name']];
-          //     $vkUserFirstNames[] = $user['first_name'];
-          //   }
-          // }
-
-          // if(isset($user['last_name']))
-          // {
-          //   if(array_search($user['last_name'], $vkUserLastNames) === false)
-          //   {
-          //     $vkUserLastNames_to_insert[] = ['last_name' => $user['last_name']];
-          //     $vkUserLastNames[] = $user['last_name'];
-          //   }
-          // }
-
-          if(isset($user['universities']))
-          {
-            $fast_universities_string = [];
-            foreach($user['universities'] as $u){
-              $ta_u = [];
-              if(isset($u['name']))
-              {
-                $ta_u[] = $u['name'];
-              }
-              if(isset($u['faculty_name']))
-              {
-                $ta_u[] = $u['faculty_name'];
-              }
-              if(isset($u['graduation']))
-              {
-                $ta_u[] = '::'.$u['graduation'];
-              }
-              $fast_universities_string[] = implode("||", $ta_u);
-            }
-            $fast_universities_string = implode("----", $fast_universities_string);
-
-            if(array_search($fast_universities_string, $vkUserUnivFasts) === false)
-            {
-              $vkUserUnivFasts_to_insert[] = ['fast_string' => $fast_universities_string];
-              $vkUserUnivFasts[] = $fast_universities_string;
-            }
-          }
-          
-        }
-        
-      }
-    }
-    
-    //VkUserFirstName ::insertOrIgnore($vkUserFirstNames_to_insert);
-    //VkUserLastName  ::insertOrIgnore($vkUserLastNames_to_insert);
-    VkUserBdate     ::insertOrIgnore($vkUserBdates_to_insert);
-    VkUserUnivFast  ::insertOrIgnore($vkUserUnivFasts_to_insert);
-    
-    // Подгружаем
-
-    //$vkUserFirstNames = VkUserFirstName::pluck('first_name','id')->all();
-    //$vkUserLastNames = VkUserLastName::pluck('last_name','id')->all();
-    $vkUserBdates = VkUserBdate::pluck('bdate','id')->all();
-    $vkUserUnivFasts = VkUserUnivFast::pluck('fast_string','id')->all();
-*/
 
     $users_inserted = VkUser::count();
     $users_linked_to_groups = DB::table('vk_group_vk_user')->count();
@@ -424,7 +412,7 @@ class TaskUsersFromGroupController extends Controller
     return redirect()->route('task.users-from-group.prossess', [
       'project_id' => request()->project_id,
       'parse_users_task_id' => $parse_users_task->id,
-      'groups_from_task_id' => $groups_from_task->id,
+      'group_search_task_id' => $groups_from_task->id,
     ])->with('success', "Продолжаем выполнять задачу <strong>".$parse_users_task->name."</strong>");
   }
 

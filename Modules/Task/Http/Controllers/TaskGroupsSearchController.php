@@ -17,6 +17,7 @@ use Modules\Task\Entities\TaskData;
 
 use Modules\VkApi\Http\Controllers\VkApiController;
 
+use Illuminate\Support\Str;
 
 class TaskGroupsSearchController extends Controller
 {
@@ -144,20 +145,50 @@ class TaskGroupsSearchController extends Controller
       return redirect()->route('task.index')->with('error', "<strong>Ой!</strong> Доступ ограничен");
     }
     $words = [];
+    $snts = [];
     $delimers = ['|',',','.','/'];
     foreach($task->vk_groups as $group){
+      $group_name = Str::lower($group->name);
       foreach($delimers as $delimer){
-        $group = str_replace($delimer, ' ', $group);
+        $group_name = str_replace('  ',' ', str_replace($delimer, ' ', $group_name));
       }
-      foreach(explode($group) as $word){
-        $key = md5($word);
-        if(empty($words[$key])){
-          $words[$key] = ['w' => $word, 'c' => 1];
-        }else{
-          $words[$key]['c'] += 1;
+
+      $group_name_ex = explode(" ", $group_name);
+      foreach($group_name_ex as $k => $word){        
+
+        $ta = [$word];
+        if(!empty($group_name_ex[$k+1]))
+        {
+          $ta[] = $group_name_ex[$k+1];
+          if(Str::length($group_name_ex[$k+1]) < 3)
+          {
+            if(!empty($group_name_ex[$k+2]))
+            {
+              $ta[] = $group_name_ex[$k+2];
+            }
+          }
+          if(count($ta) > 1){
+            $ta = implode(" ", $ta);
+            if(empty($snts[$ta])){
+              $snts[$ta] = 1;
+            }else{
+              $snts[$ta] += 1;
+            }
+          }
+        }
+
+        if(Str::length($word) > 1)
+        {
+          if(empty($words[$word])){
+            $words[$word] = 1;
+          }else{
+            $words[$word] += 1;
+          } 
         }
       }
     }
+    arsort($snts);
+    dd($snts);
 
 
 

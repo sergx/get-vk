@@ -89,7 +89,11 @@ class VkApiController extends Controller
       $VkRequestHistory->url = $requrest_url;
       $VkRequestHistory->method = $method;
       //$VkRequestHistory->cache_key = $cache_key;
-      $VkRequestHistory->params = json_encode($params, 256);
+      if($method = "execute"){
+        $VkRequestHistory->params = $params['code'];
+      }else{
+        $VkRequestHistory->params = json_encode($params, 256);
+      }      
       $VkRequestHistory->result_code = $result_code;
       $VkRequestHistory->result_length = $result_length;
       if($result_length < 2500)
