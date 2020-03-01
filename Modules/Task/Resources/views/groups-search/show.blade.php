@@ -37,7 +37,7 @@
           <td>{{$item->id}}</td>
           <td>{{$item->name}}</td>
           <td><a href="https://vk.com/{{$item->screen_name}}" target="_blank">{{$item->screen_name}}</a></td>
-          <td>{{$item->users_count}} / {{$item->users_parsed}}</td>
+          <td style="white-space:nowrap;">{{$item->users_count}} / {{$item->users_collected}} / {{$item->users_parsed}}</td>
         </tr>
       @endforeach
     </tbody>

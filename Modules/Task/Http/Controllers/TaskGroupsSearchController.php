@@ -188,7 +188,7 @@ class TaskGroupsSearchController extends Controller
       }
     }
     arsort($snts);
-    dd($snts);
+    //dd($snts);
 
 
 
@@ -229,19 +229,19 @@ class TaskGroupsSearchController extends Controller
       $groups_to_insert = [];
       $task_vk_group_to_insert = [];
       foreach($chunk['res']['items'] as $item){     
-      if($item['is_closed']){
-        continue;
-      }
+      // if($item['is_closed']){
+      //   continue;
+      // }
       
-      $validator = Validator::make(
-        [
-        'id' => $item['id']
-        ],
-        [
-        'id' => 'unique:vk_groups'
-        ]);
+      // $validator = Validator::make(
+      //   [
+      //   'id' => $item['id']
+      //   ],
+      //   [
+      //   'id' => 'unique:vk_groups'
+      //   ]);
       
-      if($validator->passes()){
+      //if($validator->passes()){
         $groups_to_insert[] = [
         'id' => $item['id'],
         'name' => $item['name'],
@@ -252,7 +252,7 @@ class TaskGroupsSearchController extends Controller
         'created_at' => now(),
         'updated_at' => now(),
         ];
-      }
+      //}
       $this->groupsAdded[$item['id']] = '';
 
       $task_vk_group_to_insert[] = ["vk_group_id" => $item['id'], "task_id" => $this->task_id, 'sort_order' => $sort_order++];
@@ -260,6 +260,8 @@ class TaskGroupsSearchController extends Controller
       VkGroup::insertOrIgnore($groups_to_insert);
       DB::table('task_vk_group')->insertOrIgnore($task_vk_group_to_insert);
     }
+
+    // Эх, все равно только 1000 возращает метод:\
     if($need_more){
       usleep(350000);
       return $this->addGroupsToDB(array_merge($params, ['offset' => $need_more]));

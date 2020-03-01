@@ -10,28 +10,18 @@
       <li class="breadcrumb-item active" aria-current="page">Задание</li>
     </ol>
   </nav>
-  <h1>Задание</h1>
-
-  <p><strong>Входные данные:</strong></p>
+  <h1>{{$task->name}}</h1>
   <ul>
-    <li><strong>Поисковый запрос</strong> <span>{{$task_data['search_query']}}</span></li>
-    <li><strong>Тип поиска</strong> <span>{{ intval($task_data['group_search_type']) }}</span></li>
-    <li><strong>Лимит</strong> <span>{{ intval($task_data['limit']) }}</span></li>
+    <li>Статус: {{$task->status}}</li>
+    <li>Потрачено времени: {{ $task->time / 60 }} минут</li>
+    @if ($task->status !== "DONE")
+    <li><a href="{{route('task.users-from-group.prossess', ['project_id' => $task->project->id, 'parse_users_task_id' => $task->id])}}">Продолжить парсинг</a></li>
+    @endif
+    <li>Пользоватьских ID собрано: {{ number_format($stat_data['user_ids_collected'], 0)}}</li>
+    <li>Групп всего: {{$stat_data['total_groups_count']}}</li>
+    <li>Группы, у которых не удалось получить IDs: {{$stat_data['total_groups_count'] - $stat_data['filled_groups_count']}}</li>
+    <li>Закрытые группы: {{$stat_data['closed_groups_count']}}</li>
+    <li>Закрытые группы, у которых удалось получить IDs: {{$stat_data['closed_groups_count_with_open_ids']}}</li>
   </ul>
-<pre>
-Хорошо бы еще получить информацию о том - сколько всего групп найдено
-</pre>
-  <table>
-    <tbody>
-      @foreach ($task->vk_groups as $item)
-        <tr>
-          <td>{{$item->id}}</td>
-          <td>{{$item->name}}</td>
-          <td><a href="https://vk.com/{{$item->screen_name}}" target="_blank">{{$item->screen_name}}</a></td>
-          <td>{{$item->is_closed}}</td>
-        </tr>
-      @endforeach
-    </tbody>
-  </table>
 </div>
 @endsection
