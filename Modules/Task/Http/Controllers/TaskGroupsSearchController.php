@@ -135,6 +135,14 @@ class TaskGroupsSearchController extends Controller
     $task = Task::with(['project','task_data','vk_groups'])->where('id',$request->task_id)->first();
     //$task->vk_groups = $task->vk_groups->sortBy('sort_order');
 
+    $user_parce_task_id = TaskData::where(function($q) use ($request){
+      $q->where('key', 'groups_search_task_id');
+      $q->where('value', $request->task_id);
+    })->pluck('id')->first();
+    if($user_parce_task_id)
+    {
+      $user_parce_task = Task::find($user_parce_task_id);
+    }
     //dd($task->vk_groups);
     $task_data = []; // search_query, group_search_type, limit
     foreach($task->task_data as $td){
@@ -144,9 +152,11 @@ class TaskGroupsSearchController extends Controller
     {
       return redirect()->route('task.index')->with('error', "<strong>Ой!</strong> Доступ ограничен");
     }
+    
     $words = [];
     $snts = [];
-    $delimers = ['|',',','.','/'];
+    $delimers = ['|',',','.','/','"',"'","«","»","(",")","—", " - ", "- ", " -"];
+    $predlogi = explode(", ", "в, без, до, из, к, на, по, о, от, перед, при, через, с, у, за, над, об, под, про, для, и");
     foreach($task->vk_groups as $group){
       $group_name = Str::lower($group->name);
       foreach($delimers as $delimer){
@@ -154,19 +164,24 @@ class TaskGroupsSearchController extends Controller
       }
 
       $group_name_ex = explode(" ", $group_name);
-      foreach($group_name_ex as $k => $word){        
-
+      foreach($group_name_ex as $k => $word){
         $ta = [$word];
-        if(!empty($group_name_ex[$k+1]))
+
+        if(!empty($group_name_ex[$k+1]) &&
+              ( !in_array($group_name_ex[$k+1], $predlogi) ||
+                  (!empty($group_name_ex[$k+2]) && in_array($group_name_ex[$k+1], $predlogi) && !in_array($group_name_ex[$k+2], $predlogi) )
+              )
+          )
         {
           $ta[] = $group_name_ex[$k+1];
-          if(Str::length($group_name_ex[$k+1]) < 3)
+          if( in_array($group_name_ex[$k+1], $predlogi) )
           {
-            if(!empty($group_name_ex[$k+2]))
+            if(!empty($group_name_ex[$k+2]) && !in_array($group_name_ex[$k+2], $predlogi))
             {
               $ta[] = $group_name_ex[$k+2];
             }
           }
+
           if(count($ta) > 1){
             $ta = implode(" ", $ta);
             if(empty($snts[$ta])){
@@ -174,6 +189,14 @@ class TaskGroupsSearchController extends Controller
             }else{
               $snts[$ta] += 1;
             }
+          }
+        }
+        
+        if( in_array($word, $predlogi) )
+        {
+          if(!empty($group_name_ex[$k+1]))
+          {
+          $word = $word . " ". $group_name_ex[$k+1];
           }
         }
 
@@ -188,12 +211,26 @@ class TaskGroupsSearchController extends Controller
       }
     }
     arsort($snts);
-    //dd($snts);
+    arsort($words);
 
-
-
-
-    return view('task::groups-search.show', ['task' => $task, 'task_data' => $task_data]);
+    $snts_result = [];
+    foreach($snts as $str => $count){
+      if($count > 2){
+        $snts_result[] = ['s' => $str, 'c' => $count];
+      }else{
+        break;
+      }
+    }
+    $words_result = [];
+    foreach($words as $str => $count){
+      if($count > 4){
+        $words_result[] = ['s' => $str, 'c' => $count];
+      }else{
+        break;
+      }
+    }
+    
+    return view('task::groups-search.show', ['task' => $task, 'task_data' => $task_data, 'words_result' => $words_result, 'snts_result' => $snts_result]);
   }
 
   // Отрефакторить нужно в соответствии с SDK

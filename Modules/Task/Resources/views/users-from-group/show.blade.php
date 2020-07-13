@@ -19,9 +19,8 @@
     @endif
     <li>Пользоватьских ID собрано: {{ number_format($stat_data['user_ids_collected'], 0)}}</li>
     <li>Групп всего: {{$stat_data['total_groups_count']}}</li>
-    <li>Группы, у которых не удалось получить IDs: {{$stat_data['total_groups_count'] - $stat_data['filled_groups_count']}}</li>
     <li>Закрытые группы: {{$stat_data['closed_groups_count']}}</li>
-    <li>Закрытые группы, у которых удалось получить IDs: {{$stat_data['closed_groups_count_with_open_ids']}}</li>
+    <li>Группы, у которых не удалось получить IDs: {{$stat_data['closed_groups_count_with_open_ids']}}</li>
   </ul>
 </div>
 @endsection

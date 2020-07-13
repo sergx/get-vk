@@ -29,6 +29,34 @@
   {{Form::hidden('group_search_task_id', $task->id)}}
   {{Form::submit('Собрать', ['class' => 'btn btn-primary'])}}
   {!! Form::close() !!}
+  <div class="row">
+    <div class="col">
+      <table class="table">
+        <tbody>
+          @foreach ($snts_result as $item)
+            <tr>
+              <td>{{$item['s']}}</td>
+              <td>{{$item['c']}}</td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
+    <div class="col">
+      <table class="table">
+        <tbody>
+          @foreach ($words_result as $item)
+            <tr>
+              <td>{{$item['s']}}</td>
+              <td>{{$item['c']}}</td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
 
   <table>
     <tbody>

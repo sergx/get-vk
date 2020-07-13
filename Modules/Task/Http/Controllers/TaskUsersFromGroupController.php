@@ -64,9 +64,12 @@ class TaskUsersFromGroupController extends Controller
     $stat_data = [];
     $stat_data['user_ids_collected'] = $vk_groups->sum('users_collected');
     $stat_data['total_groups_count'] = $vk_groups->count();
-    $stat_data['filled_groups_count'] = $vk_groups->where("users_count", ">", "0")->count();
     $stat_data['closed_groups_count'] = $vk_groups->where("is_closed", "1")->count();
-    $stat_data['closed_groups_count_with_open_ids'] = $vk_groups->where("is_closed", "1")->where("users_count", ">", "0")->toSql();
+    $stat_data['closed_groups_count_with_open_ids'] = $vk_groups->where(function($q){
+      $q->where("users_collected", NULL);
+    })->orWhere(function($q){
+      $q->where("users_collected", 0);
+    })->count();
 
 
     return view('task::users-from-group.show', ['task' => $task, 'stat_data' => $stat_data,]);
@@ -113,6 +116,8 @@ class TaskUsersFromGroupController extends Controller
     $fields = $settings['fields'] ?: '';
     $offset_key = $settings['offset_key'] ?: '';
 
+    $max_offset = 19000;
+
     // $groups_in_cache = [];
     if(session("reduce_limit"))
     {
@@ -124,7 +129,7 @@ class TaskUsersFromGroupController extends Controller
       // $cache_key = md5($count . $fields . $item->id . intval($item->users_parsed));
       // if(!Cache::has($cache_key))
       // {
-      if($limit > 0 && (!$item->users_count || $item->{$offset_key} < $item->users_count)){
+      if($limit > 0 && (!$item->users_count || $item->{$offset_key} < $item->users_count) && intval($item->{$offset_key}) <= $max_offset){
         $exec .= 'gr.push({"id":"'.strval($item->id).'", "offset": '.intval($item->{$offset_key}).'}); ';
         $limit--;
       }
@@ -136,7 +141,7 @@ class TaskUsersFromGroupController extends Controller
     if($limit > 0){
       foreach($groups as $item){
         $new_offet = intval($item->{$offset_key}) + $count;
-        if($item->users_count && $item->users_count > $new_offet){
+        if($new_offet <= $max_offset && $item->users_count && $item->users_count > $new_offet){
           while($item->users_count > $new_offet){
             $exec .= 'gr.push({"id":"'.strval($item->id).'", "offset": '.$new_offet.'});';
             $limit--;
@@ -212,11 +217,20 @@ class TaskUsersFromGroupController extends Controller
     $groups_search_task_id = $parse_users_task->task_data->where('key', 'groups_search_task_id')->pluck('value')->first();
     $groups_from_task = Task::find($groups_search_task_id);
 
-    $groups = $groups_from_task->vk_groups()->where('users_count', NULL)->take(50)->get();
-    if(!count($groups))
-    {
-      $groups = $groups_from_task->vk_groups()->whereColumn('users_collected',"<", "users_count")->take(50)->get();
-    }
+    $groups = $groups_from_task->vk_groups()->where(function($q){
+      $q->where('users_count', NULL);
+    })->orWhere(function($q){
+      $q->where('users_count', "!=", NULL);
+      $q->whereColumn('users_collected',"<", "users_count");
+      $q->where('users_collected', "<", 20000);
+    })->take(50)->get();
+
+    // $groups = $groups_from_task->vk_groups()->where('users_count', NULL)->take(50)->get();
+    // if(!count($groups))
+    // {
+    //   $groups = $groups_from_task->vk_groups()->where('users_collected', "<", 20000)->whereColumn('users_collected',"<", "users_count")->take(50)->get();
+
+    // }
 
     //$result = $groups;
     if(!count($groups)){
@@ -288,9 +302,7 @@ class TaskUsersFromGroupController extends Controller
         // в другом случае пишем в файлы
         }
         // Обновляем данные по группе
-        if(!$vkGroup->users_count){
-          $vkGroup->users_count = $group['res']['count'];
-        }
+        $vkGroup->users_count = $group['res']['count'];
         if(!$vkGroup->users_collected){
           $vkGroup->users_collected = $count_items;
         }else{
